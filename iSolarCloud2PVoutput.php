@@ -70,6 +70,7 @@ array(1) {
 */
 if(!is_array($sg_data)) {
 	echo 'No valid data from GoSungrow!' . PHP_EOL;
+	var_dump($ret);
 	die;
 }
 
@@ -114,6 +115,13 @@ if($pvo_array) {
 	curl_setopt( $ch, CURLOPT_RETURNTRANSFER, true);
 	// curl_setopt( $ch, CURLOPT_VERBOSE, true);
 	$response = curl_exec( $ch );
+	$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+	if($http_code != 200) {
+		echo 'Error uploading data to pvoutput.org!' . PHP_EOL;
+		var_dump($response);
+		die;
+	}
 }
 
 // ***** Save configuration *****
