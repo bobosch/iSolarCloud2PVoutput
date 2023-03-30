@@ -4,6 +4,7 @@ $cwd = dirname(__FILE__) . '/';
 $tz = date_default_timezone_get();
 
 $interval = 5 * 60; // 5 minutes / 300 seconds
+$get_date = false;
 
 // Load configuration
 $content = file_get_contents($cwd . 'config.json');
@@ -26,8 +27,8 @@ $end_date = date('YmdHi', $end_ts);
 
 // ***** Get date from iSolarCloud *****
 $sg_opt = new stdClass();
-$sg_opt->ps_key = implode(',', array_fill(0, 7, $config['SG_key']));
-$sg_opt->points = 'p1,p4,p5,p6,p7,p8,p14';
+$sg_opt->ps_key = implode(',', array_fill(0, 8, $config['SG_key']));
+$sg_opt->points = 'p1,p2,p4,p5,p6,p7,p8,p14';
 $sg_opt->minute_interval = sprintf("%02d", $interval / 60);
 $sg_opt->start_time_stamp = $config['start_date'] . '00';
 $sg_opt->end_time_stamp = $end_date . '00';
@@ -79,28 +80,34 @@ $pvo_array = array();
 foreach($sg_data as $ts => $sg_status) {
 	$sg_points = $sg_status['points'];
 	if(!isset($sg_points['p1'])) $sg_points['p1'] = 0;   // kWh Daily Yield
+	if(!isset($sg_points['p2'])) $sg_points['p2'] = 0;   // kWh Total Yield
 	if(!isset($sg_points['p4'])) $sg_points['p4'] = 0;   // ℃  Internal Air Temperature
 	if(!isset($sg_points['p5'])) $sg_points['p5'] = 0;   // V   MPPT1 Voltage
 	if(!isset($sg_points['p6'])) $sg_points['p6'] = 0;   // A   MPPT1 Current
 	if(!isset($sg_points['p7'])) $sg_points['p7'] = 0;   // V   MPPT2 Voltage
 	if(!isset($sg_points['p8'])) $sg_points['p8'] = 0;   // A   MPPT2 Current
 	if(!isset($sg_points['p14'])) $sg_points['p14'] = 0; // kW  Total DC Power
-	if($sg_points['p5'] || $sg_points['p6'] || $sg_points['p7'] || $sg_points['p8'] || $sg_points['p14']) {
-		$pvo_status = array(
-			substr($sg_status['timestamp'], 0, 8),
-			substr($sg_status['timestamp'], 8, 2) . ':' . substr($sg_status['timestamp'], 10, 2),
-			$sg_points['p1'],
-			$sg_points['p14'],
-			'',
-			'',
-			$sg_points['p4'],
-			'',
-			$sg_points['p5'],
-			$sg_points['p6'],
-			$sg_points['p7'],
-			$sg_points['p8'],
-		);
-		$pvo_array[] = implode(',', $pvo_status);
+	// Valid when total yield available
+	if($sg_points['p2']) {
+		$get_date = substr($sg_status['timestamp'], 0, 12);
+		// Send to pvoutput.org when string voltage or current or total DC power available
+		if($sg_points['p5'] || $sg_points['p6'] || $sg_points['p7'] || $sg_points['p8'] || $sg_points['p14']) {
+			$pvo_status = array(
+				substr($sg_status['timestamp'], 0, 8),
+				substr($sg_status['timestamp'], 8, 2) . ':' . substr($sg_status['timestamp'], 10, 2),
+				$sg_points['p1'],
+				$sg_points['p14'],
+				'',
+				'',
+				$sg_points['p4'],
+				'',
+				$sg_points['p5'],
+				$sg_points['p6'],
+				$sg_points['p7'],
+				$sg_points['p8'],
+			);
+			$pvo_array[] = implode(',', $pvo_status);
+		}
 	}
 }
 
@@ -125,6 +132,8 @@ if($pvo_array) {
 }
 
 // ***** Save configuration *****
-$config['start_date'] = $end_date;
-file_put_contents($cwd . 'config.json', json_encode($config));
+if($get_date) {
+	$config['start_date'] = $get_date;
+	file_put_contents($cwd . 'config.json', json_encode($config));
+}
 ?>
