@@ -20,6 +20,18 @@ if (!isset($config['PVO_key'])) $config['PVO_key'] = '00000000000000000000000000
 if (!isset($config['PVO_ID'])) $config['PVO_ID'] = '00000';
 if (!isset($config['start_date'])) $config['start_date'] = '202301010000';
 
+$sg_point_names = array(
+	'p1',  // kWh Daily Yield
+	'p2',  // kWh Total Yield
+	'p3',  // h   Total On-grid Running Time
+	'p4',  // ℃  Internal Air Temperature
+	'p5',  // V   MPPT1 Voltage
+	'p6',  // A   MPPT1 Current
+	'p7',  // V   MPPT2 Voltage
+	'p8',  // A   MPPT2 Current
+	'p14', // kW  Total DC Power
+);
+
 // PVoutput.org allows only 30 status updates at once
 $end_ts = strtotime($config['start_date']) + 29 * $interval;
 if ($end_ts > time()) $end_ts = floor(time() / $interval) * $interval; // align to interval
@@ -27,8 +39,8 @@ $end_date = date('YmdHi', $end_ts);
 
 // ***** Get date from iSolarCloud *****
 $sg_opt = new stdClass();
-$sg_opt->ps_key = implode(',', array_fill(0, 8, $config['SG_key']));
-$sg_opt->points = 'p1,p2,p4,p5,p6,p7,p8,p14';
+$sg_opt->ps_key = implode(',', array_fill(0, count($sg_point_names), $config['SG_key']));
+$sg_opt->points = implode(',', $sg_point_names);
 $sg_opt->minute_interval = sprintf("%02d", $interval / 60);
 $sg_opt->start_time_stamp = $config['start_date'] . '00';
 $sg_opt->end_time_stamp = $end_date . '00';
@@ -79,16 +91,11 @@ if(!is_array($sg_data)) {
 $pvo_array = array();
 foreach($sg_data as $ts => $sg_status) {
 	$sg_points = $sg_status['points'];
-	if(!isset($sg_points['p1'])) $sg_points['p1'] = 0;   // kWh Daily Yield
-	if(!isset($sg_points['p2'])) $sg_points['p2'] = 0;   // kWh Total Yield
-	if(!isset($sg_points['p4'])) $sg_points['p4'] = 0;   // ℃  Internal Air Temperature
-	if(!isset($sg_points['p5'])) $sg_points['p5'] = 0;   // V   MPPT1 Voltage
-	if(!isset($sg_points['p6'])) $sg_points['p6'] = 0;   // A   MPPT1 Current
-	if(!isset($sg_points['p7'])) $sg_points['p7'] = 0;   // V   MPPT2 Voltage
-	if(!isset($sg_points['p8'])) $sg_points['p8'] = 0;   // A   MPPT2 Current
-	if(!isset($sg_points['p14'])) $sg_points['p14'] = 0; // kW  Total DC Power
-	// Valid when total yield available
-	if($sg_points['p2']) {
+	foreach($sg_point_names as $sg_point_name) {
+		if(!isset($sg_points[$sg_point_name])) $sg_points[$sg_point_name] = 0;
+	}
+	// Valid when Total On-grid Running Time available
+	if($sg_points['p3']) {
 		$get_date = substr($sg_status['timestamp'], 0, 12);
 		// Send to pvoutput.org when string voltage or current or total DC power available
 		if($sg_points['p5'] || $sg_points['p6'] || $sg_points['p7'] || $sg_points['p8'] || $sg_points['p14']) {
