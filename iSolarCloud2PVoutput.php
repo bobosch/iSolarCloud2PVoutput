@@ -46,12 +46,15 @@ $sg_opt->start_time_stamp = $config['start_date'] . '00';
 $sg_opt->end_time_stamp = $end_date . '00';
 $sg_opt->ps_id = $config['SG_ID'];
 
+$cmd = $cwd . "GoSungrow api get queryMutiPointDataList '" . json_encode($sg_opt) . "'";
+debug($cmd);
 ob_start();
-passthru($cwd . "/GoSungrow api get queryMutiPointDataList '" . json_encode($sg_opt) . "'");
+passthru($cmd);
 $ret = ob_get_clean();
 
 // Check data
 $out = json_decode($ret, true);
+debug($out);
 $sg_data = $out['data'];
 /*
 array(1) {
@@ -117,6 +120,7 @@ foreach($sg_data as $ts => $sg_status) {
 		}
 	}
 }
+debug($pvo_array);
 
 // ***** Send data to PVoutput.org *****
 // https://pvoutput.org/help/api_specification.html
@@ -142,5 +146,9 @@ if($pvo_array) {
 if($get_date) {
 	$config['start_date'] = $get_date;
 	file_put_contents($cwd . 'config.json', json_encode($config));
+}
+
+function debug($data) {
+//	var_dump($data);
 }
 ?>
