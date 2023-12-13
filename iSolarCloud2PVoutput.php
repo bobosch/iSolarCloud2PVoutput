@@ -46,75 +46,32 @@ $sg_opt->start_time_stamp = $config['start_date'] . '00';
 $sg_opt->end_time_stamp = $end_date . '00';
 $sg_opt->ps_id = $config['SG_ID'];
 
-$cmd = $cwd . "GoSungrow api get queryMutiPointDataList '" . json_encode($sg_opt) . "'";
-debug($cmd);
-ob_start();
-passthru($cmd);
-$ret = ob_get_clean();
-
-// Check data
-$out = json_decode($ret, true);
-debug($out);
-$sg_data = $out['data'];
-/*
-array(1) {
-  ["2023-02-02T12:00:00Z"]=>
-  array(3) {
-    ["timestamp"]=>
-    string(14) "20230202120000"
-    ["ps_key"]=>
-    string(13) "5132189_1_1_1"
-    ["points"]=>
-    array(7) {
-      ["p1"]=>
-      int(2400)
-      ["p14"]=>
-      int(574)
-      ["p4"]=>
-      float(34.6)
-      ["p5"]=>
-      float(423.4)
-      ["p6"]=>
-      float(0.3)
-      ["p7"]=>
-      float(466.5)
-      ["p8"]=>
-      float(0.9)
-    }
-  }
-}
-*/
-if(!is_array($sg_data)) {
-	echo 'No valid data from GoSungrow!' . PHP_EOL;
-	var_dump($ret);
-	die;
-}
+require('sg.php');
 
 // ***** Prepare data *****
 $pvo_array = array();
-foreach($sg_data as $ts => $sg_status) {
-	$sg_points = $sg_status['points'];
+foreach($data as $ts => $values) {
 	foreach($sg_point_names as $sg_point_name) {
-		if(!isset($sg_points[$sg_point_name])) $sg_points[$sg_point_name] = 0;
+		if(!isset($values[$sg_point_name])) $values[$sg_point_name] = 0;
 	}
 	// Valid when Total On-grid Running Time available
-	if($sg_points['p3']) {
-		$get_date = substr($sg_status['timestamp'], 0, 12);
+	if($values['p3']) {
+		$get_date = substr($ts, 0, 12);
 		// Send to pvoutput.org when string voltage or current or total DC power available
-		if($sg_points['p5'] || $sg_points['p6'] || $sg_points['p7'] || $sg_points['p8'] || $sg_points['p14']) {
+		if($values['p5'] || $values['p6'] || $values['p7'] || $values['p8'] || $values['p14']) {
 			$pvo_status = array(
-				substr($sg_status['timestamp'], 0, 8),
-				substr($sg_status['timestamp'], 8, 2) . ':' . substr($sg_status['timestamp'], 10, 2),
-				$sg_points['p1'],
-				$sg_points['p14'],
+				substr($ts, 0, 8),
+				substr($ts, 8, 2) . ':' . substr($ts, 10, 2),
+				$values['p1'],
+				$values['p14'],
 				'',
 				'',
-				$sg_points['p4'],
+				$values['p4'],
 				'',
-				$sg_points['p5'],
-				$sg_points['p6'],
-				$sg_points['p7'],
-				$sg_points['p8'],
+				$values['p5'],
+				$values['p6'],
+				$values['p7'],
+				$values['p8'],
 			);
 			$pvo_array[] = implode(',', $pvo_status);
 		}
