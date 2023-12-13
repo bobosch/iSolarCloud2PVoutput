@@ -58,7 +58,7 @@ foreach($data as $ts => $values) {
 	if($values['p3']) {
 		$get_date = substr($ts, 0, 12);
 		// Send to pvoutput.org when string voltage or current or total DC power available
-		if($values['p5'] || $values['p6'] || $values['p7'] || $values['p8'] || $values['p14']) {
+		if($values['p5'] || $values['p6'] || $values['p7'] || $values['p8'] || $values['p14'] || (!$values['p1'] && (time2sec('235959') - time2sec(substr($ts, 8, 6))) < $interval)) {
 			$pvo_status = array(
 				substr($ts, 0, 8),
 				substr($ts, 8, 2) . ':' . substr($ts, 10, 2),
@@ -103,6 +103,10 @@ if($pvo_array) {
 if($get_date) {
 	$config['start_date'] = $get_date;
 	file_put_contents($cwd . 'config.json', json_encode($config));
+}
+
+function time2sec($time) {
+	return (intval(substr($time, 0, 2)) * 3600 + intval(substr($time, 2, 2)) * 60 + intval(substr($time, 4, 2)));
 }
 
 function debug($data) {
